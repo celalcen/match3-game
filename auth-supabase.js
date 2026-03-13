@@ -265,7 +265,4 @@ const AuthManager = {
   },
 };
 
-// Initialize on page load
-window.addEventListener('DOMContentLoaded', async () => {
-  await AuthManager.init();
-});
+// AuthManager is initialized by game.js on DOMContentLoaded

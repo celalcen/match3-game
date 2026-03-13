@@ -995,6 +995,8 @@ const Game = {
 };
 
 // Start game when page loads
-window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("DOMContentLoaded", async () => {
+  // Wait for AuthManager to initialize first
+  await AuthManager.init();
   Game.init();
 });

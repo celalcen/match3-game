@@ -26,34 +26,6 @@
   
   <title>Color Fusion - Match 3 Game</title>
   <link rel="stylesheet" href="style.css" />
-  
-  <!-- Supabase Client -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
-  <!-- Load modules in order -->
-  <script src="sounds.js"></script>
-  <script src="board.js"></script>
-  <script src="match.js"></script>
-  <script src="specials.js"></script>
-  <script src="ui.js"></script>
-  <script src="leaderboard.js"></script>
-  <script src="auth-supabase.js"></script>
-  <script src="game.js"></script>
-  
-  <!-- Register Service Worker -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js')
-          .then((registration) => {
-            console.log('ServiceWorker registration successful');
-          })
-          .catch((err) => {
-            console.log('ServiceWorker registration failed: ', err);
-          });
-      });
-    }
-  </script>
 </head>
 <body>
   <div class="app">
@@ -138,5 +110,28 @@
       <p class="credits">Developed by Celal ÇEN</p>
     </footer>
   </div>
+
+  <!-- Supabase Client (loaded before other scripts) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Load modules in order -->
+  <script src="sounds.js"></script>
+  <script src="board.js"></script>
+  <script src="match.js"></script>
+  <script src="specials.js"></script>
+  <script src="ui.js"></script>
+  <script src="leaderboard.js"></script>
+  <script src="auth-supabase.js"></script>
+  <script src="game.js"></script>
+  
+  <!-- Register Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .catch((err) => console.log('ServiceWorker registration failed: ', err));
+      });
+    }
+  </script>
 </body>
 </html>
