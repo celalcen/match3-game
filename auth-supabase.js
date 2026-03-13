@@ -63,10 +63,11 @@ const AuthManager = {
   // Sign in with Google
   async signInWithGoogle() {
     try {
+      const redirectTo = window.location.href.split('?')[0]; // current page without query params
       const { data, error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: redirectTo,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
