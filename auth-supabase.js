@@ -156,9 +156,39 @@ const AuthManager = {
   },
 
   // Show user menu
-  showUserMenu() {
+  async showUserMenu() {
     const modal = document.createElement('div');
     modal.className = 'auth-modal show';
+    
+    // Load stats from Supabase
+    const user = this.currentUser;
+    let bestScore = '0';
+    let gameCount = 0;
+    
+    if (user) {
+      try {
+        const { data } = await supabase
+          .from('leaderboard')
+          .select('score')
+          .eq('user_id', user.uid)
+          .order('score', { ascending: false })
+          .limit(1);
+        
+        if (data && data.length > 0) {
+          bestScore = data[0].score.toLocaleString('tr-TR');
+        }
+        
+        const { count } = await supabase
+          .from('leaderboard')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.uid);
+        
+        gameCount = count || 0;
+      } catch (e) {
+        console.error('Error loading user stats:', e);
+      }
+    }
+    
     modal.innerHTML = `
       <div class="auth-content user-menu-content">
         <div class="auth-header">
@@ -182,13 +212,17 @@ const AuthManager = {
           <div class="user-stats">
             <div class="user-stat">
               <div class="stat-label">En Yüksek Skor</div>
-              <div class="stat-value">${this.getUserBestScore()}</div>
+              <div class="stat-value">${bestScore}</div>
             </div>
             <div class="user-stat">
               <div class="stat-label">Toplam Oyun</div>
-              <div class="stat-value">${this.getUserGameCount()}</div>
+              <div class="stat-value">${gameCount}</div>
             </div>
           </div>
+          
+          <button class="view-scores-btn" id="viewMyScoresBtn">
+            📊 Skorlarımı Gör
+          </button>
           
           <button class="signout-btn" id="signOutBtn">
             🚪 Çıkış Yap
@@ -199,20 +233,29 @@ const AuthManager = {
     
     document.body.appendChild(modal);
     
-    // Close button
     document.getElementById('closeUserMenu').addEventListener('click', () => {
       modal.classList.remove('show');
       setTimeout(() => modal.remove(), 300);
     });
     
-    // Sign out button
     document.getElementById('signOutBtn').addEventListener('click', async () => {
       await this.signOut();
       modal.classList.remove('show');
       setTimeout(() => modal.remove(), 300);
     });
     
-    // Close on outside click
+    document.getElementById('viewMyScoresBtn').addEventListener('click', () => {
+      modal.classList.remove('show');
+      setTimeout(() => {
+        modal.remove();
+        LeaderboardUI.show().then(() => {
+          // Switch to "mine" tab
+          const mineTab = document.querySelector('.lb-tab[data-tab="mine"]');
+          if (mineTab) mineTab.click();
+        });
+      }, 300);
+    });
+    
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
         modal.classList.remove('show');
@@ -220,26 +263,6 @@ const AuthManager = {
       }
     });
   },
-
-  // Get user's best score
-  getUserBestScore() {
-    if (!this.isSignedIn()) return 0;
-    
-    const bestScore = LeaderboardManager.getPlayerBestScore(this.getUserDisplayName());
-    return bestScore ? bestScore.score.toLocaleString('tr-TR') : '0';
-  },
-
-  // Get user's game count
-  getUserGameCount() {
-    if (!this.isSignedIn()) return 0;
-    
-    const entries = LeaderboardManager.getLeaderboard();
-    const userEntries = entries.filter(e => 
-      e.name.toLowerCase() === this.getUserDisplayName().toLowerCase()
-    );
-    
-    return userEntries.length;
-  }
 };
 
 // Initialize on page load

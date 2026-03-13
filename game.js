@@ -967,19 +967,21 @@ const Game = {
   },
 
   // Game over
-  gameOver() {
+  async gameOver() {
     UIManager.setStatus("🎮 Oyunu Kaybettiniz! Yeniden başlatın.");
     GameState.isBusy = true;
     soundSystem.playError();
     
     // Check if score qualifies for leaderboard
-    if (LeaderboardManager.isHighScore(GameState.score)) {
+    const qualifies = await LeaderboardManager.isHighScore(GameState.score);
+    if (qualifies) {
       setTimeout(() => {
-        LeaderboardUI.showNameInput(GameState.score, GameState.level, (playerName) => {
-          const result = LeaderboardManager.addScore(playerName, GameState.score, GameState.level);
+        LeaderboardUI.showNameInput(GameState.score, GameState.level, async (playerName) => {
+          const result = await LeaderboardManager.addScore(playerName, GameState.score, GameState.level);
           
           if (result.isTopScore) {
-            UIManager.showToast(`🏆 ${result.rank}. sırada! Tebrikler!`, 3000);
+            const cloudMsg = result.savedToCloud ? ' ☁️' : '';
+            UIManager.showToast(`🏆 ${result.rank}. sırada! Tebrikler!${cloudMsg}`, 3000);
           }
           
           // Show leaderboard

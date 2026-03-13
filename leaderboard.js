@@ -1,32 +1,121 @@
 // ===== LEADERBOARD SYSTEM =====
 
 const LeaderboardManager = {
-  MAX_ENTRIES: 10,
+  MAX_ENTRIES: 100, // Supabase'de daha fazla kayıt tutabiliriz
   STORAGE_KEY: 'colorFusionLeaderboard',
 
-  // Get all leaderboard entries
-  getLeaderboard() {
+  // Get global leaderboard from Supabase
+  async getGlobalLeaderboard(limit = 100) {
     try {
-      const data = localStorage.getItem(this.STORAGE_KEY);
-      return data ? JSON.parse(data) : [];
+      const { data, error } = await supabase
+        .from('leaderboard')
+        .select('*')
+        .order('score', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      
+      return data.map(entry => ({
+        name: entry.user_name,
+        email: entry.user_email,
+        photo: entry.user_photo,
+        score: entry.score,
+        level: entry.level,
+        date: entry.created_at,
+        userId: entry.user_id
+      }));
     } catch (e) {
-      console.error('Error loading leaderboard:', e);
+      console.error('Error loading global leaderboard:', e);
+      return this.getLocalLeaderboard(); // Fallback to local
+    }
+  },
+
+  // Get user's personal scores from Supabase
+  async getUserScores(userId, limit = 10) {
+    try {
+      const { data, error } = await supabase
+        .from('leaderboard')
+        .select('*')
+        .eq('user_id', userId)
+        .order('score', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      
+      return data.map(entry => ({
+        name: entry.user_name,
+        score: entry.score,
+        level: entry.level,
+        date: entry.created_at
+      }));
+    } catch (e) {
+      console.error('Error loading user scores:', e);
       return [];
     }
   },
 
-  // Save leaderboard
-  saveLeaderboard(entries) {
+  // Get local leaderboard (fallback)
+  getLocalLeaderboard() {
     try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(entries));
+      const data = localStorage.getItem(this.STORAGE_KEY);
+      return data ? JSON.parse(data) : [];
     } catch (e) {
-      console.error('Error saving leaderboard:', e);
+      console.error('Error loading local leaderboard:', e);
+      return [];
     }
   },
 
-  // Add new score
-  addScore(playerName, score, level) {
-    const entries = this.getLeaderboard();
+  // Save to local storage (fallback)
+  saveLocalLeaderboard(entries) {
+    try {
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(entries));
+    } catch (e) {
+      console.error('Error saving local leaderboard:', e);
+    }
+  },
+
+  // Add new score (saves to both Supabase and localStorage)
+  async addScore(playerName, score, level) {
+    const user = AuthManager.getCurrentUser();
+    
+    // Save to Supabase if user is logged in
+    if (user) {
+      try {
+        const { data, error } = await supabase
+          .from('leaderboard')
+          .insert([{
+            user_id: user.uid,
+            user_name: playerName,
+            user_email: user.email,
+            user_photo: user.photoURL,
+            score: score,
+            level: level
+          }])
+          .select();
+
+        if (error) throw error;
+        
+        // Get user's rank
+        const { count } = await supabase
+          .from('leaderboard')
+          .select('*', { count: 'exact', head: true })
+          .gt('score', score);
+        
+        const rank = (count || 0) + 1;
+        
+        return {
+          rank: rank,
+          isTopScore: rank <= 100,
+          savedToCloud: true
+        };
+      } catch (e) {
+        console.error('Error saving to Supabase:', e);
+        // Fallback to local storage
+      }
+    }
+    
+    // Fallback: Save to localStorage
+    const entries = this.getLocalLeaderboard();
     
     const newEntry = {
       name: playerName,
@@ -37,30 +126,28 @@ const LeaderboardManager = {
     };
 
     entries.push(newEntry);
-    
-    // Sort by score (descending)
     entries.sort((a, b) => b.score - a.score);
-    
-    // Keep only top entries
     const topEntries = entries.slice(0, this.MAX_ENTRIES);
+    this.saveLocalLeaderboard(topEntries);
     
-    this.saveLeaderboard(topEntries);
-    
-    // Return rank (1-based)
-    const rank = topEntries.findIndex(e => 
-      e.timestamp === newEntry.timestamp
-    ) + 1;
+    const rank = topEntries.findIndex(e => e.timestamp === newEntry.timestamp) + 1;
     
     return {
       rank: rank,
-      isTopScore: rank > 0 && rank <= this.MAX_ENTRIES
+      isTopScore: rank > 0 && rank <= this.MAX_ENTRIES,
+      savedToCloud: false
     };
   },
 
   // Check if score qualifies for leaderboard
-  isHighScore(score) {
-    const entries = this.getLeaderboard();
+  async isHighScore(score) {
+    // Always return true for cloud leaderboard (we keep more entries)
+    if (AuthManager.isSignedIn()) {
+      return true;
+    }
     
+    // For local, check top 100
+    const entries = this.getLocalLeaderboard();
     if (entries.length < this.MAX_ENTRIES) {
       return true;
     }
@@ -71,17 +158,16 @@ const LeaderboardManager = {
 
   // Get player's best score
   getPlayerBestScore(playerName) {
-    const entries = this.getLeaderboard();
+    const entries = this.getLocalLeaderboard();
     const playerEntries = entries.filter(e => 
       e.name.toLowerCase() === playerName.toLowerCase()
     );
     
     if (playerEntries.length === 0) return null;
-    
-    return playerEntries[0]; // Already sorted
+    return playerEntries[0];
   },
 
-  // Clear leaderboard
+  // Clear local leaderboard
   clearLeaderboard() {
     localStorage.removeItem(this.STORAGE_KEY);
   },
@@ -110,12 +196,12 @@ const LeaderboardManager = {
 // ===== LEADERBOARD UI =====
 
 const LeaderboardUI = {
-  // Show leaderboard modal
-  show() {
-    const entries = LeaderboardManager.getLeaderboard();
-    
+  // Show leaderboard modal with tabs
+  async show() {
     const modal = document.createElement('div');
     modal.className = 'leaderboard-modal';
+    const isLoggedIn = AuthManager.isSignedIn();
+    
     modal.innerHTML = `
       <div class="leaderboard-content">
         <div class="leaderboard-header">
@@ -123,14 +209,21 @@ const LeaderboardUI = {
           <button class="leaderboard-close" id="closeLeaderboard">✕</button>
         </div>
         
-        <div class="leaderboard-list">
-          ${entries.length === 0 ? this.renderEmpty() : this.renderEntries(entries)}
+        <div class="leaderboard-tabs">
+          <button class="lb-tab active" data-tab="global">🌍 Global</button>
+          ${isLoggedIn ? '<button class="lb-tab" data-tab="mine">👤 Benim Skorlarım</button>' : ''}
+        </div>
+        
+        <div class="leaderboard-list" id="leaderboardList">
+          <div class="lb-loading">⏳ Yükleniyor...</div>
         </div>
         
         <div class="leaderboard-footer">
-          <button class="leaderboard-btn clear-btn" id="clearLeaderboard">
-            🗑️ Temizle
-          </button>
+          ${!isLoggedIn ? `
+            <button class="leaderboard-btn signin-prompt-btn" id="lbSignInBtn">
+              🔐 Giriş Yap & Skoru Kaydet
+            </button>
+          ` : ''}
           <button class="leaderboard-btn close-btn" id="closeLeaderboardBtn">
             Kapat
           </button>
@@ -140,34 +233,64 @@ const LeaderboardUI = {
     
     document.body.appendChild(modal);
     
-    // Event listeners
-    document.getElementById('closeLeaderboard').addEventListener('click', () => {
-      this.hide();
+    // Load global leaderboard
+    await this.loadTab('global');
+    
+    // Tab switching
+    modal.querySelectorAll('.lb-tab').forEach(tab => {
+      tab.addEventListener('click', async () => {
+        modal.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        await this.loadTab(tab.dataset.tab);
+      });
     });
     
-    document.getElementById('closeLeaderboardBtn').addEventListener('click', () => {
-      this.hide();
-    });
+    // Close buttons
+    document.getElementById('closeLeaderboard').addEventListener('click', () => this.hide());
+    document.getElementById('closeLeaderboardBtn').addEventListener('click', () => this.hide());
     
-    document.getElementById('clearLeaderboard').addEventListener('click', () => {
-      if (confirm('Liderlik tablosunu temizlemek istediğinize emin misiniz?')) {
-        LeaderboardManager.clearLeaderboard();
+    // Sign in button in leaderboard
+    const lbSignInBtn = document.getElementById('lbSignInBtn');
+    if (lbSignInBtn) {
+      lbSignInBtn.addEventListener('click', async () => {
         this.hide();
-        this.show();
-      }
-    });
+        await AuthManager.signInWithGoogle();
+      });
+    }
     
     // Close on outside click
     modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        this.hide();
-      }
+      if (e.target === modal) this.hide();
     });
     
     // Animation
-    setTimeout(() => {
-      modal.classList.add('show');
-    }, 10);
+    setTimeout(() => modal.classList.add('show'), 10);
+  },
+
+  // Load tab content
+  async loadTab(tab) {
+    const list = document.getElementById('leaderboardList');
+    if (!list) return;
+    
+    list.innerHTML = '<div class="lb-loading">⏳ Yükleniyor...</div>';
+    
+    if (tab === 'global') {
+      const entries = await LeaderboardManager.getGlobalLeaderboard(100);
+      const currentUserId = AuthManager.getCurrentUser()?.uid;
+      list.innerHTML = entries.length === 0 
+        ? this.renderEmpty() 
+        : this.renderEntries(entries, currentUserId);
+    } else if (tab === 'mine') {
+      const user = AuthManager.getCurrentUser();
+      if (!user) {
+        list.innerHTML = this.renderEmpty();
+        return;
+      }
+      const entries = await LeaderboardManager.getUserScores(user.uid, 20);
+      list.innerHTML = entries.length === 0 
+        ? this.renderEmpty('Henüz skor kaydetmedin!') 
+        : this.renderUserEntries(entries);
+    }
   },
 
   // Hide leaderboard modal
@@ -180,33 +303,57 @@ const LeaderboardUI = {
   },
 
   // Render empty state
-  renderEmpty() {
+  renderEmpty(msg = 'Henüz kayıt yok') {
     return `
       <div class="leaderboard-empty">
         <div class="empty-icon">🎮</div>
-        <p>Henüz kayıt yok</p>
+        <p>${msg}</p>
         <p class="empty-subtitle">İlk rekor senin olsun!</p>
       </div>
     `;
   },
 
-  // Render entries
-  renderEntries(entries) {
+  // Render global entries (highlight current user)
+  renderEntries(entries, currentUserId) {
     return entries.map((entry, index) => {
       const rank = index + 1;
       const medal = this.getMedal(rank);
       const isTop3 = rank <= 3;
+      const isCurrentUser = currentUserId && entry.userId === currentUserId;
       
       return `
-        <div class="leaderboard-entry ${isTop3 ? 'top-entry' : ''}">
+        <div class="leaderboard-entry ${isTop3 ? 'top-entry' : ''} ${isCurrentUser ? 'my-entry' : ''}">
           <div class="entry-rank ${isTop3 ? 'medal' : ''}">
             ${medal || rank}
           </div>
+          <div class="entry-avatar">
+            ${entry.photo 
+              ? `<img src="${entry.photo}" class="entry-photo" onerror="this.style.display='none'" />`
+              : `<span class="entry-avatar-placeholder">👤</span>`
+            }
+          </div>
           <div class="entry-info">
-            <div class="entry-name">${this.escapeHtml(entry.name)}</div>
+            <div class="entry-name">${this.escapeHtml(entry.name)} ${isCurrentUser ? '<span class="you-badge">Sen</span>' : ''}</div>
             <div class="entry-meta">
               Seviye ${entry.level} • ${LeaderboardManager.formatDate(entry.date)}
             </div>
+          </div>
+          <div class="entry-score">${entry.score.toLocaleString('tr-TR')}</div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  // Render user's own scores
+  renderUserEntries(entries) {
+    return entries.map((entry, index) => {
+      const rank = index + 1;
+      return `
+        <div class="leaderboard-entry ${rank === 1 ? 'top-entry' : ''}">
+          <div class="entry-rank">${rank === 1 ? '🏆' : rank}</div>
+          <div class="entry-info">
+            <div class="entry-name">Seviye ${entry.level}</div>
+            <div class="entry-meta">${LeaderboardManager.formatDate(entry.date)}</div>
           </div>
           <div class="entry-score">${entry.score.toLocaleString('tr-TR')}</div>
         </div>

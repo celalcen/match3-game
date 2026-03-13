@@ -1905,6 +1905,7 @@ body::before {
   display: flex;
   gap: 12px;
   justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .leaderboard-btn {
@@ -1939,6 +1940,117 @@ body::before {
 
 .clear-btn:hover {
   background: rgba(239, 68, 68, 0.5);
+  transform: translateY(-2px);
+}
+
+.signin-prompt-btn {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.4), rgba(236, 72, 153, 0.4));
+  color: #fff;
+  border: 2px solid rgba(168, 85, 247, 0.6);
+}
+
+.signin-prompt-btn:hover {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.6), rgba(236, 72, 153, 0.6));
+  transform: translateY(-2px);
+}
+
+/* Leaderboard Tabs */
+.leaderboard-tabs {
+  display: flex;
+  gap: 0;
+  padding: 12px 16px 0;
+  border-bottom: 2px solid rgba(168, 85, 247, 0.2);
+}
+
+.lb-tab {
+  padding: 10px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: -2px;
+}
+
+.lb-tab:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.lb-tab.active {
+  color: #a855f7;
+  border-bottom-color: #a855f7;
+}
+
+/* Loading state */
+.lb-loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 18px;
+}
+
+/* Entry avatar */
+.entry-avatar {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.entry-photo {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(168, 85, 247, 0.4);
+}
+
+.entry-avatar-placeholder {
+  font-size: 24px;
+  opacity: 0.6;
+}
+
+/* Highlight current user's entry */
+.leaderboard-entry.my-entry {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(168, 85, 247, 0.2));
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+.you-badge {
+  display: inline-block;
+  background: rgba(59, 130, 246, 0.4);
+  border: 1px solid rgba(59, 130, 246, 0.6);
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-weight: bold;
+  color: #93c5fd;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+/* View scores button in profile */
+.view-scores-btn {
+  width: 100%;
+  padding: 12px;
+  background: rgba(59, 130, 246, 0.2);
+  border: 2px solid rgba(59, 130, 246, 0.4);
+  border-radius: 12px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 12px;
+}
+
+.view-scores-btn:hover {
+  background: rgba(59, 130, 246, 0.4);
   transform: translateY(-2px);
 }
 
