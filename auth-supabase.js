@@ -5,7 +5,7 @@ const SUPABASE_URL = 'https://rozmhxnuwsegoreejeoc.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvem1oeG51d3NlZ29yZWVqZW9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyNTQwNzcsImV4cCI6MjA4ODgzMDA3N30.3P5_vg9Zn4L8VVRwBmXjCljOU7ttB9WJ2H_whBN4rEE';
 
 // Initialize Supabase client
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const AuthManager = {
   currentUser: null,
@@ -14,7 +14,7 @@ const AuthManager = {
   // Initialize Supabase Auth
   async init() {
     // Get current session
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabaseClient.auth.getSession();
     
     if (session?.user) {
       this.currentUser = this.formatUser(session.user);
@@ -22,7 +22,7 @@ const AuthManager = {
     }
     
     // Listen to auth state changes
-    supabase.auth.onAuthStateChange((event, session) => {
+    supabaseClient.auth.onAuthStateChange((event, session) => {
       console.log('Auth state changed:', event);
       
       if (session?.user) {
@@ -63,7 +63,7 @@ const AuthManager = {
   // Sign in with Google
   async signInWithGoogle() {
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: window.location.origin,
@@ -94,7 +94,7 @@ const AuthManager = {
   // Sign out
   async signOut() {
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await supabaseClient.auth.signOut();
       
       if (error) throw error;
       
@@ -167,7 +167,7 @@ const AuthManager = {
     
     if (user) {
       try {
-        const { data } = await supabase
+        const { data } = await supabaseClient
           .from('leaderboard')
           .select('score')
           .eq('user_id', user.uid)
@@ -178,7 +178,7 @@ const AuthManager = {
           bestScore = data[0].score.toLocaleString('tr-TR');
         }
         
-        const { count } = await supabase
+        const { count } = await supabaseClient
           .from('leaderboard')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', user.uid);

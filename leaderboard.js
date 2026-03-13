@@ -7,7 +7,7 @@ const LeaderboardManager = {
   // Get global leaderboard from Supabase
   async getGlobalLeaderboard(limit = 100) {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('leaderboard')
         .select('*')
         .order('score', { ascending: false })
@@ -33,7 +33,7 @@ const LeaderboardManager = {
   // Get user's personal scores from Supabase
   async getUserScores(userId, limit = 10) {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('leaderboard')
         .select('*')
         .eq('user_id', userId)
@@ -81,7 +81,7 @@ const LeaderboardManager = {
     // Save to Supabase if user is logged in
     if (user) {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from('leaderboard')
           .insert([{
             user_id: user.uid,
@@ -96,7 +96,7 @@ const LeaderboardManager = {
         if (error) throw error;
         
         // Get user's rank
-        const { count } = await supabase
+        const { count } = await supabaseClient
           .from('leaderboard')
           .select('*', { count: 'exact', head: true })
           .gt('score', score);
