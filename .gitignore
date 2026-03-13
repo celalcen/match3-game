@@ -1,0 +1,15 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.kiro/
+
+# Backup files
+*.backup
+game-old.js
+game-temp.js
+
+# Audio (large files - isteğe bağlı)
+# *.mp3

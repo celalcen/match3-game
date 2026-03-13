@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#a855f7" />
+  <meta name="description" content="Eğlenceli ve bağımlılık yapan match-3 puzzle oyunu. Renkli topları eşleştir, özel taşlar oluştur ve seviyeleri tamamla!" />
+  <meta name="keywords" content="match 3, puzzle, oyun, color fusion, eşleştirme oyunu, bulmaca" />
+  <meta name="author" content="Celal ÇEN" />
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Color Fusion - Match 3 Puzzle Game" />
+  <meta property="og:description" content="Eğlenceli ve bağımlılık yapan match-3 puzzle oyunu!" />
+  
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Color Fusion - Match 3 Puzzle Game" />
+  <meta name="twitter:description" content="Eğlenceli ve bağımlılık yapan match-3 puzzle oyunu!" />
+  
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png" />
+  
+  <title>Color Fusion - Match 3 Game</title>
+  <link rel="stylesheet" href="style.css" />
+  
+  <!-- Supabase Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Load modules in order -->
+  <script src="sounds.js"></script>
+  <script src="board.js"></script>
+  <script src="match.js"></script>
+  <script src="specials.js"></script>
+  <script src="ui.js"></script>
+  <script src="leaderboard.js"></script>
+  <script src="auth-supabase.js"></script>
+  <script src="game.js"></script>
+  
+  <!-- Register Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then((registration) => {
+            console.log('ServiceWorker registration successful');
+          })
+          .catch((err) => {
+            console.log('ServiceWorker registration failed: ', err);
+          });
+      });
+    }
+  </script>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <h1 class="game-title">🎮 Color Fusion 🎮</h1>
+      
+      <div class="user-auth">
+        <button id="signInBtn" class="signin-btn" style="display: flex;">
+          <span>🔐</span>
+          <span>Google ile Giriş</span>
+        </button>
+        
+        <div id="userProfile" class="user-profile" style="display: none;">
+          <img id="userPhoto" class="user-photo" style="display: none;" />
+          <span id="userName" class="user-name">Oyuncu</span>
+        </div>
+      </div>
+      
+      <div class="dashboard">
+        <div class="dashboard-stats">
+          <div class="stat-item stat-level">
+            <div class="stat-content">
+              <span class="stat-label">Level</span>
+              <span class="stat-value" id="levelDisplay">1</span>
+              <div class="level-progress">
+                <div class="level-progress-bar" id="levelProgress"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="stat-item stat-score">
+            <span class="stat-label">Score</span>
+            <span class="stat-value" id="score">0</span>
+          </div>
+          
+          <div class="stat-item stat-next">
+            <div id="nextBalls" class="next-balls"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="message-area" id="messageArea" style="display: none;">
+        <span class="message-icon">⚡</span>
+        <span class="message-text" id="messageText">+3 TOP GELDİ!</span>
+      </div>
+      
+      <div class="action-buttons">
+        <button id="restartBtn" class="action-btn restart-btn" title="Yeniden Başlat">🔄</button>
+        <button id="leaderboardBtn" class="action-btn leaderboard-dashboard-btn" title="Liderlik Tablosu">🏆</button>
+        <button id="musicBtn" class="action-btn music-btn" title="Müzik Aç/Kapat">🎵</button>
+        <div class="volume-control">
+          <button id="soundBtn" class="action-btn sound-btn" title="Ses Seviyesi">🔊</button>
+          <div id="volumeSlider" class="volume-slider" style="display: none;">
+            <input type="range" id="volumeRange" min="0" max="100" value="30" class="volume-range">
+            <span id="volumeValue" class="volume-value">30%</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="combo-display" id="comboDisplay" style="display: none;">
+        🔥 <span id="comboCount">0</span>x Combo!
+      </div>
+    </header>
+
+    <main class="game-wrap">
+      <div id="board" class="board"></div>
+    </main>
+    
+    <div class="powerups">
+      <button class="powerup-btn powerup-hammer" title="Çekiç">
+        <span class="powerup-icon">🔨</span>
+      </button>
+      <button class="powerup-btn powerup-lightbulb" title="İpucu">
+        <span class="powerup-icon">💡</span>
+      </button>
+      <button class="powerup-btn powerup-rocket" title="Roket">
+        <span class="powerup-icon">🚀</span>
+      </button>
+    </div>
+    
+    <footer class="footer">
+      <p class="credits">Developed by Celal ÇEN</p>
+    </footer>
+  </div>
+</body>
+</html>
