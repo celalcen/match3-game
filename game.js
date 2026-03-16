@@ -49,6 +49,11 @@ const CONFIG = {
     if (level <= 4) return [this.OBSTACLES.ICE];
     if (level <= 6) return [this.OBSTACLES.ICE, this.OBSTACLES.BONUS];
     return [this.OBSTACLES.STONE, this.OBSTACLES.ICE, this.OBSTACLES.BONUS];
+  },
+
+  // Score target to advance to next level (level * 500)
+  getLevelScoreTarget(level) {
+    return level * 500;
   }
 };
 
@@ -57,6 +62,7 @@ const GameState = {
   board: [],
   selectedCell: null,
   score: 0,
+  levelScore: 0,   // score earned in current level
   isBusy: false,
   level: 1,
   nextBalls: [],
@@ -67,6 +73,7 @@ const GameState = {
     this.board = BoardManager.createBoard(CONFIG.ROWS, CONFIG.COLS);
     this.selectedCell = null;
     this.score = 0;
+    this.levelScore = 0;
     this.isBusy = false;
     this.level = 1;
     this.nextBalls = [];
@@ -88,6 +95,22 @@ function safeTimeout(callback, delay) {
   }, delay);
 }
 
+// Add score and update level progress bar
+function addScore(points) {
+  GameState.score += points;
+  GameState.levelScore += points;
+  UIManager.updateScore(GameState.score);
+  const target = CONFIG.getLevelScoreTarget(GameState.level);
+  UIManager.updateScoreProgress(GameState.levelScore, target);
+  
+  // Check if score target reached → advance level
+  if (GameState.levelScore >= target && !GameState.isBusy) {
+    GameState.isBusy = true;
+    UIManager.setStatus('🌟 Skor hedefine ulaştın! Sonraki seviye!');
+    safeTimeout(() => Game.completeLevel(false), 600);
+  }
+}
+
 // ===== GAME LOGIC =====
 
 const Game = {
@@ -104,8 +127,9 @@ const Game = {
     UIManager.updateScore(GameState.score);
     UIManager.updateLevel(GameState.level);
     UIManager.updateNextBalls(GameState.nextBalls, CONFIG.COLORS);
-    UIManager.updateLevelProgress(20); // Initial progress
-    UIManager.setStatus("Oyun başladı!");
+    UIManager.updateLevelProgress(20);
+    UIManager.updateScoreProgress(0, CONFIG.getLevelScoreTarget(1));
+    UIManager.setStatus("Oyun başladı! Hedef: 500 puan");
 
     // Setup restart button
     document.getElementById("restartBtn").addEventListener("click", () => this.restart());
@@ -188,8 +212,9 @@ const Game = {
     UIManager.updateScore(GameState.score);
     UIManager.updateLevel(GameState.level);
     UIManager.updateNextBalls(GameState.nextBalls, CONFIG.COLORS);
-    UIManager.updateLevelProgress(20); // Initial progress
-    UIManager.setStatus("Yeni oyun başladı!");
+    UIManager.updateLevelProgress(20);
+    UIManager.updateScoreProgress(0, CONFIG.getLevelScoreTarget(1));
+    UIManager.setStatus("Yeni oyun başladı! Hedef: 500 puan");
     
     // Restart music
     soundSystem.playBackgroundMusic(GameState.level);
@@ -204,10 +229,9 @@ const Game = {
     // If clicking on a bonus obstacle, collect it
     if (cell && cell.type === "obstacle" && cell.obstacleType === CONFIG.OBSTACLES.BONUS) {
       GameState.board[r][c] = null;
-      GameState.score += 100;
+      addScore(100);
       soundSystem.playSpecialCreate();
       UIManager.setStatus("⭐ Bonus toplandı! +100");
-      UIManager.updateScore(GameState.score);
       
       UIManager.renderBoard(GameState.board, CONFIG.ROWS, CONFIG.COLS, GameState.selectedCell,
         (r, c) => this.handleCellClick(r, c));
@@ -229,14 +253,13 @@ const Game = {
       
       if (cleared.length > 0) {
         const bonus = cleared.length * 10;
-        GameState.score += bonus;
+        addScore(bonus);
         
         UIManager.setStatus(`${SpecialManager.getSpecialName(cell.special)} aktif! ${cleared.length} top patladı!`);
         
         // Render first, then add effects
         UIManager.renderBoard(GameState.board, CONFIG.ROWS, CONFIG.COLS, null,
           (r, c) => this.handleCellClick(r, c));
-        UIManager.updateScore(GameState.score);
         
         // Add visual effects after render
         safeTimeout(() => {
@@ -447,7 +470,7 @@ const Game = {
       else if (specialType === "color") bonus = 150;
       else if (specialType === "bomb") bonus = 100;
       
-      GameState.score += baseScore + bonus;
+      addScore(baseScore + bonus);
       UIManager.setStatus(`${cellsToClear.length} top temizlendi - ${SpecialManager.getSpecialName(specialCreated.type)} oluşturuldu! +${bonus} bonus`);
       
       // Add special creation animation
@@ -457,13 +480,12 @@ const Game = {
         UIManager.createParticles(specialCreated.r, specialCreated.c, specialCreated.color, 12);
       }, 100);
     } else {
-      GameState.score += baseScore;
+      addScore(baseScore);
       UIManager.setStatus(`${cellsToClear.length} top temizlendi`);
     }
     
     UIManager.renderBoard(GameState.board, CONFIG.ROWS, CONFIG.COLS, null,
       (r, c) => this.handleCellClick(r, c));
-    UIManager.updateScore(GameState.score);
     
     // Add particles for cleared cells
     safeTimeout(() => {
@@ -520,8 +542,7 @@ const Game = {
     UIManager.setStatus(statusText);
     
     // Update score
-    GameState.score += result.bonus + result.cleared.length * 10;
-    UIManager.updateScore(GameState.score);
+    addScore(result.bonus + result.cleared.length * 10);
     
     // Render first
     UIManager.renderBoard(GameState.board, CONFIG.ROWS, CONFIG.COLS, null,
@@ -580,8 +601,7 @@ const Game = {
     }
     
     if (totalCleared > 0) {
-      GameState.score += totalCleared * 10 + remaining.length * 50;
-      UIManager.updateScore(GameState.score);
+      addScore(totalCleared * 10 + remaining.length * 50);
       UIManager.setStatus(`⚡ Zincirleme! +${remaining.length} özel taş daha patladı!`);
     }
     
@@ -636,7 +656,7 @@ const Game = {
       const cleared = SpecialManager.activateSpecialPiece(special.r, special.c, GameState.board, CONFIG.ROWS, CONFIG.COLS);
       
       if (cleared.length > 0) {
-        GameState.score += cleared.length * 10;
+        addScore(cleared.length * 10);
         allCleared.push(...cleared);
       }
     }
@@ -661,8 +681,6 @@ const Game = {
         }
       }
     }, 50);
-    
-    UIManager.updateScore(GameState.score);
     
     safeTimeout(() => {
       this.checkForMoreMatches();
@@ -728,7 +746,7 @@ const Game = {
             if (adjacentCell.health <= 0) {
               // Ice destroyed
               GameState.board[nr][nc] = null;
-              GameState.score += 50;
+              addScore(50);
               UIManager.setStatus("🧊 Buz kırıldı! +50");
               
               safeTimeout(() => {
@@ -762,25 +780,28 @@ const Game = {
   },
 
   // Complete level
-  completeLevel() {
+  completeLevel(boardClear = true) {
     GameState.level++;
-    GameState.score += 500;
-    
-    // Difficulty info
-    const spawnCount = CONFIG.getSpawnCount(GameState.level);
-    const colorCount = CONFIG.getActiveColors(GameState.level).length;
-    const difficultyMsg = GameState.level > 1 ? ` | Zorluk: ${spawnCount} top, ${colorCount} renk` : '';
-    
-    UIManager.setStatus(`🎉 Seviye ${GameState.level - 1} tamamlandı! +500 bonus${difficultyMsg}`);
-    UIManager.updateScore(GameState.score);
+    GameState.levelScore = 0; // reset for new level
+
+    if (boardClear) {
+      // Bonus for clearing the board
+      addScore(500);
+      const difficultyMsg = ` | Zorluk: ${CONFIG.getSpawnCount(GameState.level)} top, ${CONFIG.getActiveColors(GameState.level).length} renk`;
+      UIManager.setStatus(`🎉 Tahta temizlendi! +500 bonus${difficultyMsg}`);
+    } else {
+      UIManager.setStatus(`🌟 Seviye ${GameState.level - 1} tamamlandı! Sonraki seviye başlıyor...`);
+    }
+
     UIManager.updateLevel(GameState.level);
-    
+    UIManager.updateScoreProgress(0, CONFIG.getLevelScoreTarget(GameState.level));
+
     // Play level transition music
     soundSystem.playLevelTransition(GameState.level);
-    
+
     // Show level complete overlay with fireworks
     UIManager.showLevelComplete(GameState.level - 1, GameState.score);
-    
+
     safeTimeout(() => {
       // Clear the board for new level
       for (let r = 0; r < CONFIG.ROWS; r++) {
@@ -788,30 +809,21 @@ const Game = {
           GameState.board[r][c] = null;
         }
       }
-      
-      // Render empty board
+
       UIManager.renderBoard(GameState.board, CONFIG.ROWS, CONFIG.COLS, null,
         (r, c) => this.handleCellClick(r, c));
-      
-      // Spawn initial balls for new level
+
       this.spawnInitialBalls();
-      
-      // Spawn obstacles for new level
       this.spawnObstacles();
-      
-      // Generate next balls
       this.generateNextBalls();
       UIManager.updateNextBalls(GameState.nextBalls, CONFIG.COLORS);
-      
-      // Reset progress bar
       UIManager.updateLevelProgress(20);
-      
-      // Render with new balls and obstacles
+
       UIManager.renderBoard(GameState.board, CONFIG.ROWS, CONFIG.COLS, null,
         (r, c) => this.handleCellClick(r, c));
-      
+
       GameState.isBusy = false;
-      UIManager.setStatus(`Seviye ${GameState.level} başladı!`);
+      UIManager.setStatus(`Seviye ${GameState.level} başladı! Hedef: ${CONFIG.getLevelScoreTarget(GameState.level).toLocaleString('tr-TR')} puan`);
     }, 1500);
   },
 

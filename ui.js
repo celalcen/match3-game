@@ -101,6 +101,15 @@ const UIManager = {
     this.scoreEl.textContent = score;
   },
 
+  // Update score-based level progress bar
+  updateScoreProgress(levelScore, target) {
+    const bar = document.getElementById('scoreProgressBar');
+    const label = document.getElementById('scoreProgressLabel');
+    const pct = Math.min(100, (levelScore / target) * 100);
+    if (bar) bar.style.width = pct + '%';
+    if (label) label.textContent = levelScore.toLocaleString('tr-TR') + ' / ' + target.toLocaleString('tr-TR');
+  },
+
   // Update level display
   updateLevel(level) {
     const levelEl = document.getElementById("levelDisplay");
