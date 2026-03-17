@@ -17,15 +17,21 @@ const CONFIG = {
   
   // Dynamic difficulty based on level
   getInitialBalls(level) {
-    // Level 1-3: 4 balls, Level 4-6: 5 balls, Level 7+: 6 balls
-    return Math.min(4 + Math.floor((level - 1) / 3), 6);
+    // Level 1-3: 4, Level 4-6: 5, Level 7-12: 6, Level 13+: 7
+    if (level <= 3) return 4;
+    if (level <= 6) return 5;
+    if (level <= 12) return 6;
+    return 7;
   },
   
   getSpawnCount(level) {
-    // Level 1-2: 3 balls, Level 3-5: 4 balls, Level 6+: 5 balls
+    // Level 1-2: 3, Level 3-5: 4, Level 6-9: 5, Level 10-14: 6, Level 15-19: 7, Level 20+: 8
     if (level <= 2) return 3;
     if (level <= 5) return 4;
-    return 5;
+    if (level <= 9) return 5;
+    if (level <= 14) return 6;
+    if (level <= 19) return 7;
+    return 8;
   },
   
   getActiveColors(level) {
@@ -37,23 +43,36 @@ const CONFIG = {
   
   // Obstacle configuration per level
   getObstacleCount(level) {
-    // Level 1-2: 0, Level 3-4: 2, Level 5-6: 3, Level 7+: 4
+    // Level 1-2: 0, Level 3-4: 2, Level 5-6: 3, Level 7-10: 4, Level 11-15: 5, Level 16-24: 6, Level 25+: 7
     if (level <= 2) return 0;
     if (level <= 4) return 2;
     if (level <= 6) return 3;
-    return 4;
+    if (level <= 10) return 4;
+    if (level <= 15) return 5;
+    if (level <= 24) return 6;
+    return 7;
   },
   
   getObstacleTypes(level) {
-    // Level 3-4: Only ice, Level 5-6: Ice + bonus, Level 7+: All types
+    // Level 3-4: Ice only, Level 5-6: Ice + bonus, Level 7-10: All types, Level 11+: More stones
     if (level <= 4) return [this.OBSTACLES.ICE];
     if (level <= 6) return [this.OBSTACLES.ICE, this.OBSTACLES.BONUS];
-    return [this.OBSTACLES.STONE, this.OBSTACLES.ICE, this.OBSTACLES.BONUS];
+    if (level <= 10) return [this.OBSTACLES.STONE, this.OBSTACLES.ICE, this.OBSTACLES.BONUS];
+    // Level 11+: Higher chance of stone obstacles
+    return [this.OBSTACLES.STONE, this.OBSTACLES.STONE, this.OBSTACLES.ICE, this.OBSTACLES.BONUS];
   },
 
   // Score target to advance to next level (level * 500)
   getLevelScoreTarget(level) {
     return level * 500;
+  },
+
+  // Move limit for level (null = unlimited, Level 30+: limited)
+  getMoveLimit(level) {
+    if (level < 30) return null; // unlimited
+    if (level <= 40) return 30;
+    if (level <= 50) return 25;
+    return 20; // Level 51+: very hard
   }
 };
 
@@ -62,23 +81,39 @@ const GameState = {
   board: [],
   selectedCell: null,
   score: 0,
-  levelScore: 0,   // score earned in current level
   isBusy: false,
   level: 1,
   nextBalls: [],
   sessionId: 0,
   comboCount: 0,
+  levelUpTriggered: false,
+  movesRemaining: null,
+  lives: 3,
+  boosters: {
+    hammer: 3,      // Çekiç: Tek topu kır
+    shuffle: 2,     // Karıştırıcı: Tahtayı karıştır
+    colorBomb: 1,   // Renk Bombası: Bir rengi patlat
+    extraMoves: 2   // +5 Hamle
+  },
 
   reset() {
     this.board = BoardManager.createBoard(CONFIG.ROWS, CONFIG.COLS);
     this.selectedCell = null;
     this.score = 0;
-    this.levelScore = 0;
     this.isBusy = false;
     this.level = 1;
     this.nextBalls = [];
     this.sessionId++;
     this.comboCount = 0;
+    this.levelUpTriggered = false;
+    this.movesRemaining = CONFIG.getMoveLimit(1);
+    this.lives = 3;
+    this.boosters = {
+      hammer: 3,
+      shuffle: 2,
+      colorBomb: 1,
+      extraMoves: 2
+    };
   },
 
   incrementSession() {
@@ -98,13 +133,13 @@ function safeTimeout(callback, delay) {
 // Add score and update level progress bar
 function addScore(points) {
   GameState.score += points;
-  GameState.levelScore += points;
   UIManager.updateScore(GameState.score);
   const target = CONFIG.getLevelScoreTarget(GameState.level);
-  UIManager.updateScoreProgress(GameState.levelScore, target);
+  UIManager.updateScoreProgress(GameState.score, target);
   
-  // Check if score target reached → advance level
-  if (GameState.levelScore >= target && !GameState.isBusy) {
+  // Check if total score reached the target for current level → advance level
+  if (GameState.score >= target && !GameState.levelUpTriggered) {
+    GameState.levelUpTriggered = true;
     GameState.isBusy = true;
     UIManager.setStatus('🌟 Skor hedefine ulaştın! Sonraki seviye!');
     safeTimeout(() => Game.completeLevel(false), 600);
@@ -114,6 +149,8 @@ function addScore(points) {
 // ===== GAME LOGIC =====
 
 const Game = {
+  activeBooster: null, // Currently selected booster
+
   // Initialize game
   init() {
     UIManager.init();
@@ -129,9 +166,9 @@ const Game = {
     UIManager.updateNextBalls(GameState.nextBalls, CONFIG.COLORS);
     UIManager.updateLevelProgress(20);
     UIManager.updateScoreProgress(0, CONFIG.getLevelScoreTarget(1));
+    UIManager.updateMoves(GameState.movesRemaining);
+    UIManager.updateLives(GameState.lives);
     UIManager.setStatus("Oyun başladı! Hedef: 500 puan");
-
-    // Setup restart button
     document.getElementById("restartBtn").addEventListener("click", () => this.restart());
     
     // Setup sound button - toggle volume slider
@@ -194,11 +231,128 @@ const Game = {
     document.getElementById("userProfile").addEventListener("click", () => {
       AuthManager.showUserMenu();
     });
+
+    // Setup booster buttons
+    this.setupBoosters();
     
     // Start background music after first interaction
     document.addEventListener('click', () => {
       soundSystem.playBackgroundMusic(GameState.level);
     }, { once: true });
+  },
+
+  // Setup booster buttons
+  setupBoosters() {
+    document.getElementById('hammerBooster').addEventListener('click', () => this.activateBooster('hammer'));
+    document.getElementById('shuffleBooster').addEventListener('click', () => this.activateBooster('shuffle'));
+    document.getElementById('colorBombBooster').addEventListener('click', () => this.activateBooster('colorBomb'));
+    document.getElementById('extraMovesBooster').addEventListener('click', () => this.activateBooster('extraMoves'));
+    
+    this.updateBoosterUI();
+  },
+
+  // Activate booster
+  activateBooster(type) {
+    if (GameState.boosters[type] <= 0) {
+      UIManager.showToast('Bu booster bitti!', 2000);
+      return;
+    }
+
+    if (this.activeBooster === type) {
+      // Deactivate
+      this.activeBooster = null;
+      document.querySelectorAll('.powerup-btn').forEach(btn => btn.classList.remove('active'));
+      UIManager.setStatus('Booster iptal edildi');
+      return;
+    }
+
+    // Activate
+    this.activeBooster = type;
+    document.querySelectorAll('.powerup-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`${type}Booster`).classList.add('active');
+
+    if (type === 'shuffle') {
+      this.useShuffleBooster();
+    } else if (type === 'extraMoves') {
+      this.useExtraMovesBooster();
+    } else if (type === 'hammer') {
+      UIManager.setStatus('🔨 Kırmak istediğin topu seç');
+    } else if (type === 'colorBomb') {
+      UIManager.setStatus('🎨 Patlatmak istediğin rengi seç');
+    }
+  },
+
+  // Use shuffle booster
+  useShuffleBooster() {
+    GameState.boosters.shuffle--;
+    this.activeBooster = null;
+    this.updateBoosterUI();
+
+    // Collect all balls
+    const balls = [];
+    for (let r = 0; r < CONFIG.ROWS; r++) {
+      for (let c = 0; c < CONFIG.COLS; c++) {
+        const cell = GameState.board[r][c];
+        if (cell && cell.type === 'ball') {
+          balls.push(cell);
+          GameState.board[r][c] = null;
+        }
+      }
+    }
+
+    // Shuffle and place back
+    for (let i = balls.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [balls[i], balls[j]] = [balls[j], balls[i]];
+    }
+
+    let idx = 0;
+    for (let r = 0; r < CONFIG.ROWS; r++) {
+      for (let c = 0; c < CONFIG.COLS; c++) {
+        if (!GameState.board[r][c] && idx < balls.length) {
+          GameState.board[r][c] = balls[idx++];
+        }
+      }
+    }
+
+    UIManager.renderBoard(GameState.board, CONFIG.ROWS, CONFIG.COLS, null,
+      (r, c) => this.handleCellClick(r, c));
+    UIManager.setStatus('🔀 Tahta karıştırıldı!');
+    soundSystem.playSpecialCreate();
+  },
+
+  // Use extra moves booster
+  useExtraMovesBooster() {
+    if (GameState.movesRemaining === null) {
+      UIManager.showToast('Bu levelde hamle limiti yok!', 2000);
+      return;
+    }
+
+    GameState.boosters.extraMoves--;
+    this.activeBooster = null;
+    GameState.movesRemaining += 5;
+    this.updateBoosterUI();
+    UIManager.updateMoves(GameState.movesRemaining);
+    UIManager.setStatus('➕ +5 hamle eklendi!');
+    soundSystem.playSpecialCreate();
+  },
+
+  // Update booster UI
+  updateBoosterUI() {
+    document.getElementById('hammerCount').textContent = GameState.boosters.hammer;
+    document.getElementById('shuffleCount').textContent = GameState.boosters.shuffle;
+    document.getElementById('colorBombCount').textContent = GameState.boosters.colorBomb;
+    document.getElementById('extraMovesCount').textContent = GameState.boosters.extraMoves;
+
+    // Disable buttons if count is 0
+    ['hammer', 'shuffle', 'colorBomb', 'extraMoves'].forEach(type => {
+      const btn = document.getElementById(`${type}Booster`);
+      if (GameState.boosters[type] <= 0) {
+        btn.classList.add('disabled');
+      } else {
+        btn.classList.remove('disabled');
+      }
+    });
   },
 
   // Restart game
@@ -214,6 +368,8 @@ const Game = {
     UIManager.updateNextBalls(GameState.nextBalls, CONFIG.COLORS);
     UIManager.updateLevelProgress(20);
     UIManager.updateScoreProgress(0, CONFIG.getLevelScoreTarget(1));
+    UIManager.updateMoves(GameState.movesRemaining);
+    UIManager.updateLives(GameState.lives);
     UIManager.setStatus("Yeni oyun başladı! Hedef: 500 puan");
     
     // Restart music
@@ -225,6 +381,61 @@ const Game = {
     if (GameState.isBusy) return;
 
     const cell = GameState.board[r][c];
+
+    // Handle booster usage
+    if (this.activeBooster === 'hammer') {
+      if (cell && cell.type === 'ball') {
+        GameState.boosters.hammer--;
+        this.activeBooster = null;
+        this.updateBoosterUI();
+        
+        GameState.board[r][c] = null;
+        UIManager.renderBoard(GameState.board, CONFIG.ROWS, CONFIG.COLS, null,
+          (r, c) => this.handleCellClick(r, c));
+        
+        UIManager.addExplosionAnimation(r, c);
+        UIManager.createParticles(r, c, cell.color, 10);
+        soundSystem.playMatch();
+        UIManager.setStatus('🔨 Top kırıldı!');
+      }
+      return;
+    }
+
+    if (this.activeBooster === 'colorBomb') {
+      if (cell && cell.type === 'ball') {
+        GameState.boosters.colorBomb--;
+        this.activeBooster = null;
+        this.updateBoosterUI();
+        
+        const targetColor = cell.color;
+        const cleared = [];
+        
+        for (let row = 0; row < CONFIG.ROWS; row++) {
+          for (let col = 0; col < CONFIG.COLS; col++) {
+            const c = GameState.board[row][col];
+            if (c && c.type === 'ball' && c.color === targetColor) {
+              cleared.push({ r: row, c: col });
+              GameState.board[row][col] = null;
+            }
+          }
+        }
+        
+        addScore(cleared.length * 20);
+        UIManager.renderBoard(GameState.board, CONFIG.ROWS, CONFIG.COLS, null,
+          (r, c) => this.handleCellClick(r, c));
+        
+        safeTimeout(() => {
+          for (const pos of cleared) {
+            UIManager.addExplosionAnimation(pos.r, pos.c);
+            UIManager.createParticles(pos.r, pos.c, targetColor, 8);
+          }
+        }, 30);
+        
+        soundSystem.playColorBomb();
+        UIManager.setStatus(`🎨 ${cleared.length} ${targetColor} top patladı!`);
+      }
+      return;
+    }
 
     // If clicking on a bonus obstacle, collect it
     if (cell && cell.type === "obstacle" && cell.obstacleType === CONFIG.OBSTACLES.BONUS) {
@@ -338,6 +549,12 @@ const Game = {
       return;
     }
 
+    // Decrease move count
+    if (GameState.movesRemaining !== null) {
+      GameState.movesRemaining--;
+      UIManager.updateMoves(GameState.movesRemaining);
+    }
+
     GameState.isBusy = true;
     GameState.selectedCell = null;
 
@@ -375,7 +592,26 @@ const Game = {
     let specialCreated = null;
     let specialType = null;
 
-    // Try to create special at moved position
+    // If no movedTo (spawn case), find best position
+    if (!movedTo) {
+      let bestScore = 0;
+      for (const [key, info] of matchMap.entries()) {
+        const [r, c] = key.split(',').map(Number);
+        const score = Math.max(
+          info.horizontal,
+          info.vertical,
+          info.diagonalDown,
+          info.diagonalUp,
+          info.square === 4 ? 4 : 0
+        );
+        if (score > bestScore) {
+          bestScore = score;
+          movedTo = { r, c };
+        }
+      }
+    }
+
+    // Try to create special at moved/best position
     if (movedTo) {
       const movedKey = `${movedTo.r},${movedTo.c}`;
       const movedCellInfo = matchMap.get(movedKey);
@@ -769,6 +1005,21 @@ const Game = {
       this.completeLevel();
       return;
     }
+
+    // Check if moves ran out (only for limited move levels)
+    if (GameState.movesRemaining !== null && GameState.movesRemaining <= 0) {
+      // Check if level target reached
+      const target = CONFIG.getLevelScoreTarget(GameState.level);
+      if (GameState.score >= target) {
+        // Target reached, advance level
+        UIManager.setStatus('🎯 Hedef tamamlandı! Hamle bitti ama kazandın!');
+        safeTimeout(() => this.completeLevel(false), 1000);
+      } else {
+        // Failed to reach target
+        this.gameOver();
+      }
+      return;
+    }
     
     // Spawn new balls (using current nextBalls) - count based on level
     const spawnCount = CONFIG.getSpawnCount(GameState.level);
@@ -782,7 +1033,15 @@ const Game = {
   // Complete level
   completeLevel(boardClear = true) {
     GameState.level++;
-    GameState.levelScore = 0; // reset for new level
+    GameState.levelUpTriggered = false;
+    GameState.movesRemaining = CONFIG.getMoveLimit(GameState.level);
+
+    // Every 10 levels, gain 1 life
+    if (GameState.level % 10 === 1 && GameState.level > 1) {
+      GameState.lives++;
+      UIManager.updateLives(GameState.lives);
+      UIManager.showToast('💖 Bonus Can Kazandın! +1', 3000);
+    }
 
     if (boardClear) {
       // Bonus for clearing the board
@@ -794,7 +1053,8 @@ const Game = {
     }
 
     UIManager.updateLevel(GameState.level);
-    UIManager.updateScoreProgress(0, CONFIG.getLevelScoreTarget(GameState.level));
+    UIManager.updateScoreProgress(GameState.score, CONFIG.getLevelScoreTarget(GameState.level));
+    UIManager.updateMoves(GameState.movesRemaining);
 
     // Play level transition music
     soundSystem.playLevelTransition(GameState.level);
@@ -823,8 +1083,7 @@ const Game = {
         (r, c) => this.handleCellClick(r, c));
 
       GameState.isBusy = false;
-      UIManager.setStatus(`Seviye ${GameState.level} başladı! Hedef: ${CONFIG.getLevelScoreTarget(GameState.level).toLocaleString('tr-TR')} puan`);
-    }, 1500);
+      UIManager.setStatus(`Seviye ${GameState.level} başladı! Hedef: ${CONFIG.getLevelScoreTarget(GameState.level).toLocaleString('tr-TR')} puan`);    }, 1500);
   },
 
   // Spawn new balls
@@ -980,8 +1239,44 @@ const Game = {
 
   // Game over
   async gameOver() {
-    UIManager.setStatus("🎮 Oyunu Kaybettiniz! Yeniden başlatın.");
     GameState.isBusy = true;
+    
+    // Check if player has lives left
+    if (GameState.lives > 0) {
+      GameState.lives--;
+      UIManager.updateLives(GameState.lives);
+      
+      UIManager.setStatus(`💔 Can kaybettiniz! Kalan: ${GameState.lives}`);
+      soundSystem.playError();
+      
+      // Continue from current level
+      safeTimeout(() => {
+        // Reset board but keep level and score
+        for (let r = 0; r < CONFIG.ROWS; r++) {
+          for (let c = 0; c < CONFIG.COLS; c++) {
+            GameState.board[r][c] = null;
+          }
+        }
+        
+        this.spawnInitialBalls();
+        this.spawnObstacles();
+        this.generateNextBalls();
+        UIManager.updateNextBalls(GameState.nextBalls, CONFIG.COLORS);
+        GameState.movesRemaining = CONFIG.getMoveLimit(GameState.level);
+        UIManager.updateMoves(GameState.movesRemaining);
+        
+        UIManager.renderBoard(GameState.board, CONFIG.ROWS, CONFIG.COLS, null,
+          (r, c) => this.handleCellClick(r, c));
+        
+        GameState.isBusy = false;
+        UIManager.setStatus(`Devam ediyorsun! Kalan can: ${GameState.lives}`);
+      }, 1500);
+      
+      return;
+    }
+    
+    // No lives left - real game over
+    UIManager.setStatus("💀 Oyun Bitti! Tüm canlar tükendi.");
     soundSystem.playError();
     
     // Check if score qualifies for leaderboard

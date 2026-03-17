@@ -64,6 +64,16 @@
           <div class="stat-item stat-next">
             <div id="nextBalls" class="next-balls"></div>
           </div>
+
+          <div class="stat-item stat-moves" id="movesDisplay" style="display: none;">
+            <span class="stat-label">Hamle</span>
+            <span class="stat-value" id="movesValue">∞</span>
+          </div>
+
+          <div class="stat-item stat-lives">
+            <span class="stat-label">Can</span>
+            <span class="stat-value" id="livesValue">❤️ 3</span>
+          </div>
         </div>
       </div>
       
@@ -101,14 +111,21 @@
     </main>
     
     <div class="powerups">
-      <button class="powerup-btn powerup-hammer" title="Çekiç">
+      <button class="powerup-btn" id="hammerBooster" title="Çekiç - Tek topu kır">
         <span class="powerup-icon">🔨</span>
+        <span class="powerup-count" id="hammerCount">3</span>
       </button>
-      <button class="powerup-btn powerup-lightbulb" title="İpucu">
-        <span class="powerup-icon">💡</span>
+      <button class="powerup-btn" id="shuffleBooster" title="Karıştırıcı - Tahtayı karıştır">
+        <span class="powerup-icon">🔀</span>
+        <span class="powerup-count" id="shuffleCount">2</span>
       </button>
-      <button class="powerup-btn powerup-rocket" title="Roket">
-        <span class="powerup-icon">🚀</span>
+      <button class="powerup-btn" id="colorBombBooster" title="Renk Bombası - Bir rengi patlat">
+        <span class="powerup-icon">🎨</span>
+        <span class="powerup-count" id="colorBombCount">1</span>
+      </button>
+      <button class="powerup-btn" id="extraMovesBooster" title="+5 Hamle">
+        <span class="powerup-icon">➕</span>
+        <span class="powerup-count" id="extraMovesCount">2</span>
       </button>
     </div>
     

@@ -102,12 +102,14 @@ const UIManager = {
   },
 
   // Update score-based level progress bar
-  updateScoreProgress(levelScore, target) {
+  updateScoreProgress(totalScore, target) {
     const bar = document.getElementById('scoreProgressBar');
     const label = document.getElementById('scoreProgressLabel');
-    const pct = Math.min(100, (levelScore / target) * 100);
+    // Previous level's target (what was needed to reach current level)
+    const prevTarget = target - 500;
+    const pct = Math.min(100, Math.max(0, ((totalScore - prevTarget) / 500) * 100));
     if (bar) bar.style.width = pct + '%';
-    if (label) label.textContent = levelScore.toLocaleString('tr-TR') + ' / ' + target.toLocaleString('tr-TR');
+    if (label) label.textContent = Math.min(totalScore, target).toLocaleString('tr-TR') + ' / ' + target.toLocaleString('tr-TR');
   },
 
   // Update level display
@@ -115,6 +117,49 @@ const UIManager = {
     const levelEl = document.getElementById("levelDisplay");
     if (levelEl) {
       levelEl.textContent = level;
+    }
+  },
+
+  // Update moves display
+  updateMoves(movesRemaining) {
+    const movesDisplay = document.getElementById('movesDisplay');
+    const movesValue = document.getElementById('movesValue');
+    
+    if (movesRemaining === null) {
+      // Unlimited moves
+      if (movesDisplay) movesDisplay.style.display = 'none';
+    } else {
+      // Limited moves
+      if (movesDisplay) movesDisplay.style.display = 'flex';
+      if (movesValue) {
+        movesValue.textContent = movesRemaining;
+        // Warning color if low
+        if (movesRemaining <= 5) {
+          movesValue.style.color = '#ff4d4f';
+        } else if (movesRemaining <= 10) {
+          movesValue.style.color = '#ffcc00';
+        } else {
+          movesValue.style.color = '#fff';
+        }
+      }
+    }
+  },
+
+  // Update lives display
+  updateLives(lives) {
+    const livesValue = document.getElementById('livesValue');
+    if (livesValue) {
+      const hearts = '❤️'.repeat(Math.max(0, lives));
+      livesValue.textContent = hearts || '💔';
+      
+      // Warning color if low
+      if (lives <= 1) {
+        livesValue.style.color = '#ff4d4f';
+      } else if (lives <= 2) {
+        livesValue.style.color = '#ffcc00';
+      } else {
+        livesValue.style.color = '#fff';
+      }
     }
   },
 
