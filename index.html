@@ -26,6 +26,8 @@
   
   <title>Color Fusion - Match 3 Game</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="quest-styles.css" />
+  <link rel="stylesheet" href="secret-code-styles.css" />
 </head>
 <body>
   <div class="app">
@@ -84,6 +86,8 @@
       
       <div class="action-buttons">
         <button id="restartBtn" class="action-btn restart-btn" title="Yeniden Başlat">🔄</button>
+        <button id="questsBtn" class="action-btn quests-btn" title="Günlük Görevler">📅</button>
+        <button id="secretCodeBtn" class="action-btn secret-code-btn" title="Gizli Hediye Kodu">🎁</button>
         <button id="leaderboardBtn" class="action-btn leaderboard-dashboard-btn" title="Liderlik Tablosu">🏆</button>
         <button id="musicBtn" class="action-btn music-btn" title="Müzik Aç/Kapat">🎵</button>
         <div class="volume-control">
@@ -144,7 +148,18 @@
   <script src="specials.js"></script>
   <script src="ui.js"></script>
   <script src="leaderboard.js"></script>
+  <script src="dailyQuests.js"></script>
+  <script src="secretCode.js"></script>
+  
+  <!-- AUTHENTICATION SYSTEM -->
+  <!-- Seçenek 1: Supabase Auth (Google OAuth gerektirir) -->
+  <!-- Google OAuth kurulumu için GOOGLE_AUTH_SETUP.md dosyasına bakın -->
   <script src="auth-supabase.js"></script>
+  
+  <!-- Seçenek 2: Mock Auth (Test için - Google OAuth olmadan çalışır) -->
+  <!-- Yukarıdaki satırı yorum yapıp aşağıdakini aktif edin: -->
+  <!-- <script src="auth-mock.js"></script> -->
+  
   <script src="game.js"></script>
   
   <!-- Register Service Worker -->

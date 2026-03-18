@@ -13,3 +13,20 @@ game-temp.js
 
 # Audio (large files - isteğe bağlı)
 # *.mp3
+
+# Android Studio
+android-setup/.gradle/
+android-setup/.idea/
+android-setup/local.properties
+android-setup/build/
+android-setup/app/build/
+android-setup/*.iml
+android-setup/.DS_Store
+android-setup/captures/
+android-setup/.externalNativeBuild/
+android-setup/.cxx/
+
+# Keystore files (GÜVENLİK - asla commit etme!)
+*.jks
+*.keystore
+keystore.properties

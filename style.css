@@ -90,16 +90,16 @@ body::before {
 }
 
 .game-title {
-  margin: 0 0 20px 0;
-  font-size: 42px;
+  margin: 0 0 12px 0;
+  font-size: 32px;
   text-align: center;
   background: linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #3b82f6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  filter: drop-shadow(0 0 30px rgba(168, 85, 247, 0.6));
+  filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.5));
   font-weight: 900;
-  letter-spacing: 3px;
+  letter-spacing: 2px;
   text-transform: uppercase;
   display: block;
   animation: titleGlow 3s ease-in-out infinite;
@@ -594,26 +594,25 @@ body::before {
 /* Mobile responsive dashboard */
 @media (max-width: 768px) {
   .game-title {
-    font-size: 32px;
-    letter-spacing: 2px;
-    margin-bottom: 12px;
+    display: none !important;
   }
 
   .dashboard {
-    padding: 8px;
+    padding: 5px 8px;
+    margin-bottom: 6px;
   }
 
   .dashboard-stats {
     grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
+    gap: 4px;
   }
 
   .stat-item {
-    padding: 8px 6px;
+    padding: 5px 4px;
   }
 
   .stat-icon {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .stat-label {
@@ -621,55 +620,106 @@ body::before {
   }
 
   .stat-value {
-    font-size: 15px;
+    font-size: 14px;
   }
 
   .next-ball {
-    width: 18px;
-    height: 18px;
+    width: 14px;
+    height: 14px;
+  }
+
+  .action-buttons {
+    gap: 4px;
+    margin-bottom: 6px;
   }
 
   .action-btn {
-    padding: 8px;
+    padding: 0;
     font-size: 16px;
-    min-width: 40px;
-    min-height: 40px;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
   }
 
   .dashboard-status {
-    padding: 8px 10px;
+    padding: 6px 8px;
   }
 
   .status-icon {
-    font-size: 14px;
-  }
-
-  .status-text {
     font-size: 12px;
   }
 
+  .status-text {
+    font-size: 11px;
+  }
+
   .combo-display {
-    padding: 8px 16px;
-    font-size: 14px;
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+  
+  .topbar {
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+  
+  .user-auth {
+    margin-bottom: 6px;
   }
 }
 
 @media (max-width: 480px) {
+  /* Başlığı çok küçült veya gizle */
   .game-title {
-    font-size: 24px;
-    letter-spacing: 1.5px;
+    font-size: 0px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 0 !important;
+    overflow: hidden;
+    display: none; /* Tamamen gizle */
+  }
+  
+  /* Topbar'ı minimize et */
+  .topbar {
+    gap: 2px;
+    margin-bottom: 4px;
+  }
+  
+  /* User auth alanını küçült */
+  .user-auth {
+    margin-bottom: 4px;
+  }
+  
+  .signin-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  
+  .user-profile {
+    padding: 4px 8px;
+  }
+  
+  .user-name {
+    font-size: 11px;
+    max-width: 60px;
+  }
+  
+  .user-photo {
+    width: 20px;
+    height: 20px;
   }
 
   .dashboard-stats {
-    gap: 5px;
+    gap: 3px;
   }
 
   .stat-item {
-    padding: 6px 4px;
+    padding: 3px 2px;
   }
 
   .stat-icon {
-    font-size: 16px;
+    font-size: 14px;
   }
 
   .stat-label {
@@ -677,8 +727,71 @@ body::before {
   }
 
   .stat-value {
-    font-size: 14px;
+    font-size: 13px;
   }
+  
+  .next-ball {
+    width: 12px;
+    height: 12px;
+  }
+  
+  /* Dashboard'ı küçült */
+  .dashboard {
+    padding: 4px 6px;
+    margin-bottom: 4px;
+  }
+  
+  /* Action buttons'ları küçült */
+  .action-buttons {
+    gap: 3px;
+    margin-bottom: 4px;
+  }
+  
+  .action-btn {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    font-size: 14px !important;
+  }
+  
+  /* Score progress bar'ı küçült */
+  .score-progress-wrap {
+    margin-bottom: 4px;
+  }
+  
+  .score-progress-track {
+    height: 6px;
+  }
+  
+  .score-progress-label {
+    font-size: 8px;
+    min-width: 45px;
+  }
+  
+  /* Powerups'ları küçült */
+  .powerups {
+    gap: 4px;
+    margin: 6px 0;
+  }
+  
+  .powerup-btn {
+    width: 40px !important;
+    height: 40px !important;
+  }
+  
+  .powerup-icon {
+    font-size: 18px;
+  }
+  
+  .powerup-count {
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+    top: -4px;
+    right: -4px;
+  }
+}
 
   .next-ball {
     width: 16px;
@@ -1615,10 +1728,12 @@ body::before {
   }
 }
 
-@media (max-width: 980px) {
+/* Mobil ve küçük tabletler (767px ve altı) */
+@media (max-width: 767px) {
   .game-wrap {
     flex-direction: column;
     align-items: center;
+    gap: 8px;
   }
 
   .board {
@@ -1637,6 +1752,43 @@ body::before {
 
   .next-balls {
     gap: 4px;
+  }
+}
+
+/* Küçük tablet (768px - 900px arası) */
+@media (min-width: 768px) and (max-width: 900px) {
+  .game-title {
+    display: none !important;
+  }
+  
+  .board {
+    max-width: min(600px, calc(100vw - 40px)) !important;
+    gap: 5px !important;
+    padding: 10px !important;
+  }
+  
+  .game-title {
+    font-size: 28px !important;
+    margin-bottom: 12px !important;
+  }
+  
+  .dashboard {
+    padding: 12px 16px !important;
+  }
+  
+  .action-btn {
+    width: 48px !important;
+    height: 48px !important;
+    font-size: 20px !important;
+  }
+  
+  .powerup-btn {
+    width: 60px !important;
+    height: 60px !important;
+  }
+  
+  .powerup-icon {
+    font-size: 28px !important;
   }
 }
 
@@ -2724,5 +2876,183 @@ body::before {
   
   .powerup-icon {
     font-size: 24px;
+  }
+}
+
+
+/* iPad landscape (yatay) - 768px - 1024px */
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+  .game-title {
+    display: none !important;
+  }
+  
+  .board {
+    max-width: 500px !important;
+    width: 500px !important;
+    height: 500px !important;
+  }
+  
+  .game-wrap {
+    flex-direction: row !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
+    gap: 20px !important;
+  }
+}
+
+
+/* iPad Pro ve büyük tabletler (901px - 1366px) - Portrait */
+@media (min-width: 901px) and (max-width: 1366px) and (orientation: portrait) {
+  .game-title {
+    display: none !important;
+  }
+  
+  .board {
+    max-width: 85vw !important;
+    width: 85vw !important;
+    height: auto !important;
+    aspect-ratio: 1 / 1 !important;
+    gap: 10px !important;
+    padding: 18px !important;
+  }
+  
+  .cell {
+    border-radius: 20px !important;
+  }
+  
+  .ball {
+    width: 85% !important;
+    height: 85% !important;
+  }
+  
+  .obstacle {
+    width: 88% !important;
+    height: 88% !important;
+    font-size: 48px !important;
+  }
+  
+  .game-title {
+    font-size: 56px !important;
+    margin-bottom: 28px !important;
+  }
+  
+  .dashboard {
+    padding: 28px 48px !important;
+    margin-bottom: 24px !important;
+  }
+  
+  .stat-value {
+    font-size: 40px !important;
+  }
+  
+  .stat-label {
+    font-size: 16px !important;
+  }
+  
+  .next-ball {
+    width: 36px !important;
+    height: 36px !important;
+  }
+  
+  .action-btn {
+    width: 70px !important;
+    height: 70px !important;
+    font-size: 32px !important;
+  }
+  
+  .action-buttons {
+    gap: 14px !important;
+    margin-bottom: 20px !important;
+  }
+  
+  .powerup-btn {
+    width: 100px !important;
+    height: 100px !important;
+  }
+  
+  .powerup-icon {
+    font-size: 50px !important;
+  }
+  
+  .powerup-count {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 16px !important;
+  }
+  
+  .powerups {
+    gap: 16px !important;
+    margin: 24px 0 !important;
+  }
+  
+  .score-progress-wrap {
+    max-width: 85vw !important;
+    margin: 0 auto 20px !important;
+  }
+  
+  .score-progress-track {
+    height: 20px !important;
+  }
+  
+  .score-progress-label {
+    font-size: 16px !important;
+  }
+}
+
+
+/* iPad Pro 12.9" ve çok büyük ekranlar */
+@media (min-width: 1367px) {
+  .game-title {
+    display: none !important;
+  }
+  
+  .board {
+    max-width: 800px !important;
+    width: 80vw !important;
+    height: auto !important;
+    aspect-ratio: 1 / 1 !important;
+    gap: 10px !important;
+    padding: 20px !important;
+  }
+  
+  .game-title {
+    font-size: 60px !important;
+  }
+  
+  .dashboard {
+    padding: 32px 56px !important;
+  }
+  
+  .stat-value {
+    font-size: 44px !important;
+  }
+  
+  .action-btn {
+    width: 75px !important;
+    height: 75px !important;
+    font-size: 34px !important;
+  }
+  
+  .powerup-btn {
+    width: 110px !important;
+    height: 110px !important;
+  }
+  
+  .powerup-icon {
+    font-size: 55px !important;
+  }
+}
+
+/* Tüm tablet ve büyük ekranlar için genel kural */
+@media (min-width: 768px) {
+  /* Tahta her zaman merkezde ve büyük olsun */
+  .game-wrap {
+    min-height: 60vh;
+    justify-content: center;
+  }
+  
+  /* App container'ı optimize et */
+  .app {
+    padding: 20px;
   }
 }

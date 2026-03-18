@@ -137,6 +137,9 @@ function addScore(points) {
   const target = CONFIG.getLevelScoreTarget(GameState.level);
   UIManager.updateScoreProgress(GameState.score, target);
   
+  // Track quest: score earned
+  DailyQuestsManager.updateProgress('scoreEarned', points);
+  
   // Check if total score reached the target for current level → advance level
   if (GameState.score >= target && !GameState.levelUpTriggered) {
     GameState.levelUpTriggered = true;
@@ -221,6 +224,20 @@ const Game = {
     document.getElementById("leaderboardBtn").addEventListener("click", () => {
       LeaderboardUI.show();
     });
+
+    // Setup quests button
+    document.getElementById("questsBtn").addEventListener("click", () => {
+      DailyQuestsUI.show();
+    });
+
+    // Setup secret code button
+    document.getElementById("secretCodeBtn").addEventListener("click", () => {
+      SecretCodeUI.show();
+    });
+    
+    // Initialize secret code system
+    SecretCodeManager.init();
+    this.spawnSecretCharacter();
     
     // Setup sign in button
     document.getElementById("signInBtn").addEventListener("click", async () => {
@@ -659,6 +676,9 @@ const Game = {
 
     const cellsToClear = MatchDetector.getCellsToClear(matches);
     
+    // Track quest: balls popped
+    DailyQuestsManager.updateProgress('ballsPopped', cellsToClear.length);
+    
     // Check for special pieces in cleared cells
     const specialsToActivate = [];
     for (const cell of cellsToClear) {
@@ -698,6 +718,9 @@ const Game = {
         color: specialCreated.color,
         special: specialCreated.type
       };
+
+      // Track quest: special created
+      DailyQuestsManager.updateProgress('specialsCreated', 1);
 
       soundSystem.playSpecialCreate();
       
@@ -1036,6 +1059,9 @@ const Game = {
     GameState.levelUpTriggered = false;
     GameState.movesRemaining = CONFIG.getMoveLimit(GameState.level);
 
+    // Track quest: level completed
+    DailyQuestsManager.updateProgress('levelsCompleted', 1);
+
     // Every 10 levels, gain 1 life
     if (GameState.level % 10 === 1 && GameState.level > 1) {
       GameState.lives++;
@@ -1079,11 +1105,15 @@ const Game = {
       UIManager.updateNextBalls(GameState.nextBalls, CONFIG.COLORS);
       UIManager.updateLevelProgress(20);
 
+      // Spawn secret character for this level
+      this.spawnSecretCharacter();
+
       UIManager.renderBoard(GameState.board, CONFIG.ROWS, CONFIG.COLS, null,
         (r, c) => this.handleCellClick(r, c));
 
       GameState.isBusy = false;
-      UIManager.setStatus(`Seviye ${GameState.level} başladı! Hedef: ${CONFIG.getLevelScoreTarget(GameState.level).toLocaleString('tr-TR')} puan`);    }, 1500);
+      UIManager.setStatus(`Seviye ${GameState.level} başladı! Hedef: ${CONFIG.getLevelScoreTarget(GameState.level).toLocaleString('tr-TR')} puan`);
+    }, 1500);
   },
 
   // Spawn new balls
@@ -1298,6 +1328,99 @@ const Game = {
         });
       }, 1000);
     }
+  },
+
+  // Spawn secret character on board (during gameplay, not at level start)
+  spawnSecretCharacter() {
+    // Remove any existing secret character
+    const existingChar = document.querySelector('.secret-character');
+    if (existingChar) {
+      existingChar.remove();
+    }
+
+    // Check if this level has a secret character
+    if (GameState.level > 50) return;
+    
+    // Check if level has uncollected character
+    if (!SecretCodeManager.hasUncollectedCharacter(GameState.level)) return;
+
+    // Random delay between 5-15 seconds after level starts
+    const delay = 5000 + Math.random() * 10000;
+    
+    safeTimeout(() => {
+      // Double check character still not collected
+      if (!SecretCodeManager.hasUncollectedCharacter(GameState.level)) return;
+      
+      const charData = SecretCodeManager.getCharacterForLevel(GameState.level);
+      if (!charData) return;
+
+      // Find a random empty or ball cell to place the character
+      const board = document.querySelector('.board');
+      if (!board) return;
+
+      const cells = Array.from(board.querySelectorAll('.cell'));
+      if (cells.length === 0) return;
+
+      // Filter cells that have balls or are empty (not obstacles)
+      const validCells = cells.filter((cell, index) => {
+        const r = Math.floor(index / CONFIG.COLS);
+        const c = index % CONFIG.COLS;
+        const boardCell = GameState.board[r][c];
+        return !boardCell || boardCell.type === 'ball';
+      });
+
+      if (validCells.length === 0) return;
+
+      const randomIndex = Math.floor(Math.random() * validCells.length);
+      const cell = validCells[randomIndex];
+
+      // Create secret character element
+      const secretChar = document.createElement('div');
+      secretChar.className = 'secret-character';
+      secretChar.textContent = charData.char;
+      secretChar.dataset.level = GameState.level;
+      secretChar.dataset.char = charData.char;
+      secretChar.dataset.index = charData.index;
+
+      // Add click handler
+      secretChar.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.collectSecretCharacter(secretChar);
+      });
+
+      cell.appendChild(secretChar);
+
+      // Show hint notification
+      UIManager.showToast('✨ Gizli karakter belirdi! Hızlıca yakala!', 3000);
+      soundSystem.playSpecialCreate();
+    }, delay);
+  },
+
+  // Collect secret character
+  collectSecretCharacter(element) {
+    const level = parseInt(element.dataset.level);
+    const result = SecretCodeManager.collectCharacter(level);
+
+    if (!result) return;
+
+    // Play sound
+    soundSystem.playSpecialCreate();
+
+    // Remove from board with animation
+    element.style.animation = 'explode 0.5s ease-out forwards';
+    setTimeout(() => element.remove(), 500);
+
+    // Show notification
+    SecretCodeUI.showCharacterCollected(
+      result.char,
+      result.index,
+      result.total,
+      result.isComplete
+    );
+
+    // Add score bonus
+    addScore(100);
+    UIManager.showToast('🎁 Gizli karakter bulundu! +100 puan', 2000);
   }
 };
 
