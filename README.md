@@ -1,6 +1,10 @@
-# 🎮 Color Fusion - Match 3 Puzzle Game
+# 🎮 Ball Blast - Match-3 Puzzle Game
 
-Eğlenceli ve bağımlılık yapan match-3 puzzle oyunu! Renkli topları eşleştir, özel taşlar oluştur ve seviyeleri tamamla!
+Modern ve eğlenceli bir match-3 puzzle oyunu. Renkli topları eşleştir, özel güçler kullan ve yüksek skor yap!
+
+## 🎯 Canlı Demo
+
+**🌐 Oyunu Oyna:** [https://celalcen.github.io/match3-game/](https://celalcen.github.io/match3-game/)
 
 ## 🌟 Özellikler
 
